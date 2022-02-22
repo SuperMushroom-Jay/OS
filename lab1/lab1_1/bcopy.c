@@ -38,17 +38,24 @@ int main(int argc,char **argv){
    //-r指令,对于普通文件来说没有意思，只有源文件是目录，目标文件是目录才可发挥作用
    case 1:{
       i=2;
-      for(;i<argc-1;i++){
+      stat(argv[argc-1],&s_buf);
+      if(S_ISDIR(s_buf.st_mode)){
+         for(;i<argc-1;i++){
             stat(argv[i],&s_buf);
             //如果是普通文件
             if(S_ISREG(s_buf.st_mode)){
-               copyFileToFile(argv[i],argv[argc-1],mode);
+               copyFileToDir(argv[i],argv[argc-1],mode);
                continue;
             }
             if(S_ISDIR(s_buf.st_mode)){
                copyDirToDir(argv[i],argv[argc-1],argv[i],mode);
             }
          }
+      }else if(S_ISREG(s_buf.st_mode)){
+         if(argc<=4){
+            copyFileToFile(argv[2],argv[3],mode);
+         }
+      }
 
    }break;
    //-rf与-fr指令同
@@ -212,7 +219,7 @@ int copyFileToFile(const char *src,const char *dist,int mode){
          return -2;
       }
    }
-   printf("%s -> %s \n",src,dist);
+   printf("file: %s ===> file: %s \n",src,dist);
    return 0;
 }
 /**
@@ -222,6 +229,7 @@ int copyFileToFile(const char *src,const char *dist,int mode){
 int copyFileToDir(const char *src,const char *dist,int mode){
    char path[128];
    sprintf(path , "%s/%s" , dist , src);  //目标文件目录
+   printf("file: %s ===> dir: %s \n",src,dist);
    copyFileToFile(src,path,mode);
 }
 /**
@@ -240,18 +248,20 @@ int copyDirToDir(const char *src,const char *dist,const char *filename,int mode)
    sprintf(distPath,"%s/%s",dist,filename);   //目录路径
    ret = stat(distPath , &s_buf);             //判断目录是否存在
    if(ret==-1){         //目标目录不存在
-      ret = mkdir(distPath,077);   //创建目标目录
+      ret = mkdir(distPath,0777);   //创建目标目录
       dir=opendir(src); //打开源目录
       if(dir==NULL){
-         printf("open source %s dir falied\n",src);
+         printf("open source dir: %s falied\n",src);
          return -1;
       }
       //递归复制文件
       while(1){
          //读取文件夹
          entry = readdir(dir);
-			if(entry==NULL)
-				break;
+			if(entry==NULL){
+            printf("copy end\n");
+            break;
+         }
          //跳过 . 和 ..
 			if((strcmp(entry->d_name , ".")==0)||(strcmp(entry->d_name , "..")==0))
 				continue ; 
@@ -261,11 +271,12 @@ int copyDirToDir(const char *src,const char *dist,const char *filename,int mode)
 			stat(temSrcPath , &s_buf);
          //是否是一个常规文件
 			if(S_ISREG(s_buf.st_mode)){
+            printf("copy file\n");
 				copyFileToFile(temSrcPath,tempDistPath,mode);
 			}
          //是否是一个文件夹
 			else if(S_ISDIR(s_buf.st_mode)){
-            printf("%s -> %s \n",tempDistPath,distPath);
+            printf("dir: %s ===> dir: %s \n",tempDistPath,distPath);
 				copyDirToDir(tempDistPath , distPath , entry->d_name, mode);			
 			}
       }
