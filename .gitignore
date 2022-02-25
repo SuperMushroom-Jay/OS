@@ -1,12 +1,21 @@
 # Ignore some folders except special files
 
+.vscode/
+
 lab1/lab1_1/*
-!lab1/lab1_1/*.[c|md]
+!lab1/lab1_1/*.c
+!lab1/lab1_1/*.md
 !lab1/lab1_1/gtk/gtk.c
 
 
 lab1/lab1_2/*
-!lab1/lab1_2/*.[c|md]
+!lab1/lab1_2/*.c
+!lab1/lab1_2/*.md
 
 lab2/*
-!lab2/*.[c|md]
+!lab2/*.c
+!lab2/*.md
+
+lab3/*
+!lab3/*.c
+!lab3/*.md
