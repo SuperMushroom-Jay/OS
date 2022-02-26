@@ -19,3 +19,6 @@ lab2/*
 lab3/*
 !lab3/*.c
 !lab3/*.md
+!lab3/Makefile
+
+lab4/src/system_monitor.c
