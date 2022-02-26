@@ -5,7 +5,7 @@ RES = res/
 INCLUDE = -I./include/
 TARGET = main
 
-SRCS = $(SRC)main.c $(SRC)stringtool.c
+SRCS = $(SRC)main.c $(SRC)stringtool.c $(SRC)proctool.c
 OBJS = $(SRCS:.c=.o)
 
 # $@	目标文件   
@@ -17,7 +17,7 @@ $(TARGET):$(OBJS)
 	$(CC) -o $@ $^
 
 clean:
-	rm -rf $(SRC)$(TARGET) $(OBJS)
+	rm -rf $(TARGET) $(OBJS)
 
 %.o:%.c
 	$(CC) $(INCLUDE) -o $@ -c $<

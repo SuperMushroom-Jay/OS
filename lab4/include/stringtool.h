@@ -12,7 +12,7 @@
  * @brief 字符串匹配
  * 
  * @param str 源字符串
- * @param regex 正则表达式
+ * @param pattern 正则表达式
  * @return int 匹配返回TRUE,否则返回FALSE
  */
 int string_match(const char *str,const char *pattern);

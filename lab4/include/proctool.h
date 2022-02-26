@@ -1,8 +1,6 @@
 #ifndef __PROCTOOL_H__
 #define __PROCTOOL_H__
 #include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
 
 /*宏定义*************************************************/
 #define TRUE 1
@@ -18,7 +16,13 @@ typedef struct {
 }CPU_INFO;
 
 /*函数定义*************************************************/
-char* get_cpu_info(char *filename);     //获取CPU 的信息(型号, 家族, 缓存大小等)
+/**
+ * @brief 获取cpu的简单信息
+ * 
+ * @param filename cpuinfo文件路径
+ * @return CPU_INFO* 返回CPU_INFO指针
+ */
+CPU_INFO * get_cpu_info(char *filename);     //获取CPU 的信息(型号, 家族, 缓存大小等)
 
 
 
