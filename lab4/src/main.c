@@ -9,17 +9,23 @@
 
 
 int main(){
-    CPU_INFO *cpu_info=NULL;
-    cpu_info=get_cpu_info("/proc/cpuinfo");
-    printf("status=%d\n",string_match("ababbabc","^abb"));
-    if(cpu_info!=NULL){
-        printf("%s\n",cpu_info->vendor_id);
-        printf("%s\n",cpu_info->model_name);
-        printf("%s\n",cpu_info->cpu_mhz);
-        printf("%s\n",cpu_info->cache_size);
+    SYS_INFO *sys_info=getSysInfo();
+    if(sys_info!=NULL){
+        printf("%s\n",sys_info->hostName);
+        printf("%s\n",sys_info->bootTime);
+        printf("%s\n",sys_info->upTime);
+        printf("%s\n",sys_info->osType);
+        printf("%s\n",sys_info->osRelease);
     }else{
-        printf("error\n");
+        printf("FALSE");
     }
-    free(cpu_info); //释放内存
+    // char buf[1024];
+    // readCMD("date -d \"$(awk -F. '{print $1}' /proc/uptime) second ago\" +\"%Y-%m-%d %H:%M:%S\"",buf,1024);
+    // boolean status = getSysInfoBootTime("/proc/uptime",&sys_info);
+    // if(status==FALSE){
+    //     printf("FALSE\n");
+    // }
+    // getSysInfoUpTime("/proc/uptime",&sys_info);
+    // printf("%s",buf);
     return 0;
 }
