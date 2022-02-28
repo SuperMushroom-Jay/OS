@@ -132,6 +132,7 @@ static int  character_driver_init(void)  //初始化函数
 static void  character_driver_exit(void) //卸载函数
 {
     printk(KERN_ALERT"\n===> the character_driver start unregister ... <===\n");
+    kfree(character_buf);               //释放缓冲区
     unregister_chrdev(CHARACTER_MAJOR,"mydriver");  //注销设备 
     printk("\n===> unregister success! <===\n");
 }

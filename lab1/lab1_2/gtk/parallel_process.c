@@ -25,76 +25,71 @@
 #define buf_t_mutex 5
 
 
-pid_t pids[3];  //用来保存三个进程的pid
-int shmids_buf_s;  //用来开辟两个共享缓冲区buf_s 和buf_t
+pid_t pids[3];       //用来保存三个进程的pid
+int shmids_buf_s;    //用来开辟两个共享缓冲区buf_s 和buf_t
 int shmids_buf_t;
-int shmids_buf_s_count;
-int shmids_buf_t_count;
-int times=0;
-int copySize=BUF_SIZE;
 int semID;      //信号灯集合id
 union semun {
     int val;
     struct semid_ds* buf;
     unsigned short* arry;
 };
-guint timePid;
-  
 typedef struct {
-    GtkWidget *widget;
-    char *filename;
-    char *content;
-}WidgetData;
-pthread_t ph_id[3];  //线程id
-GtkWidget *showlabel; 		//定义一个label;
+    GtkWidget *widget;  //组件
+    char *filename;     //文件名
+    char *title;        //窗口标题
+    int mode;           //类型
+    int t_pid;        //定时器
+    int filesize;       //文件大小
+    int count;          //次数
+    int copySize;       //复制一次的大小
+}DATA;
 
+typedef struct {
+    char buf[1024];
+    int count;
+}FileData;
 
 /*************声明函数***************/
-int get(const char *filename);
-int copy();
-int put(const char *filename);
+int get(const char *filename,gpointer data);
+int copy(gpointer data);
+int put(const char *filename,gpointer data);
 int initSem();
 int delSem();
 int P(int index);
 int V(int index);
-int showWindows(int argc,char **argv,char *title,char* content,int mode);
-guint gtk_label_modified(GtkWidget *widget);
-void get_start(GtkWidget *widget, gpointer data);
-void copy_start(GtkWidget *label,gpointer data);
-void put_start(GtkWidget *label,gpointer data);
-void get_pthread();
-void copy_pthread();
-void put_pthread();
+void showWindows(int argc,char **argv,gpointer data);
+guint gtk_label_modified(gpointer data);
 void destroy( GtkWidget *widget,gpointer data );
 gint delete_event( GtkWidget *widget, GdkEvent *event, gpointer data );
-
+guint get_start(gpointer data);
+guint copy_start(gpointer data);
+guint put_start(gpointer data);
 
 int main(int argc,char **argv){
     if(argc!=3){
         printf("parm != 3\n");
         exit(-1);
     }
+    DATA data;
+    struct stat statbuf;
+    int ret = stat(argv[1],&statbuf);
+    if(ret==-1){
+        exit(-1);
+    }
+    data.filesize=statbuf.st_size;  //返回文件大小
+    printf("file size:%d\n",data.filesize);
     int i;
     //创建buf_s
-    shmids_buf_s=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(char),0666|IPC_CREAT);
+    shmids_buf_s=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(FileData),0666|IPC_CREAT);
     if(shmids_buf_s==-1){
         printf("buf_s share memory create failed\n");
         exit(-1);
     }
     //创建buf_t缓冲区
-    shmids_buf_t=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(char),0666|IPC_CREAT);
+    shmids_buf_t=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(FileData),0666|IPC_CREAT);
     if(shmids_buf_t==-1){
         printf("buf_t share memory create failed\n");
-        exit(-1);
-    }
-    shmids_buf_t_count=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(int),0666|IPC_CREAT);
-    if(shmids_buf_t_count==-1){
-        printf("buf_t_count share memory create failed\n");
-        exit(-1);
-    }
-    shmids_buf_s_count=shmget((key_t)IPC_PRIVATE,BUF_SIZE*sizeof(int),0666|IPC_CREAT);
-    if(shmids_buf_s_count==-1){
-        printf("buf_s_count share memory create failed\n");
         exit(-1);
     }
     /**
@@ -125,38 +120,34 @@ int main(int argc,char **argv){
             pids[i]=pid;
         }
     }
+    pthread_t pth_id;
+    data.mode=i;
     switch (i)
     {
     case 0: //get进程
         {
-            //get(argv[1]);
-            showWindows(argc,argv,"get","get",0);
-            if(pthread_join(ph_id[i],NULL)==0){
-                printf("get pthread killed\n");
-            }else{
-                printf("get pthread kill failed\n");
-            }
-            
+            data.filename=argv[1];
+            printf("get filename %s\n",data.filename);
+            char buf[]="get";
+            data.title=buf;
+            showWindows(argc,argv,&data);
+            printf("get end\n");
         }break;
     case 1: //copy进程
         {
-            //copy();
-            showWindows(argc,argv,"copy","copy",1);
-            if(pthread_join(ph_id[i],NULL)==0){
-                printf("copy pthread killed\n");
-            }else{
-                printf("copy pthread kill failed\n");
-            }
+            char buf[]="copy";
+            data.title=buf;
+            showWindows(argc,argv,&data);
+            printf("copy end\n");
         }break;
     case 2: //put进程
         {
-            //put(\argv[2]);
-            showWindows(argc,argv,"put","put",2);
-            if(pthread_join(ph_id[i],NULL)==0){
-                printf("put pthread killed\n");
-            }else{
-                printf("put pthread kill failed\n");
-            }
+            char buf[]="put";
+            data.title=buf;
+            data.filename=argv[2];
+            printf("put filename %s\n",data.filename);
+            showWindows(argc,argv,&data);
+            printf("put end\n");
         }break;
     default://主进程
         {
@@ -165,8 +156,6 @@ int main(int argc,char **argv){
             wait(NULL);
             shmctl(shmids_buf_s,IPC_RMID,0);
             shmctl(shmids_buf_t,IPC_RMID,0);
-            shmctl(shmids_buf_s_count,IPC_RMID,0);
-            shmctl(shmids_buf_t_count,IPC_RMID,0);
             delSem();
             printf("main end\n");
         }break;
@@ -194,34 +183,40 @@ int main(int argc,char **argv){
  * @param filename //要复制的文件名
  * @return int 
  */
-int get(const char *filename)
+int get(const char *filename,gpointer data)
 {
-    int *ret=shmat(shmids_buf_s_count,NULL,0);  //获取共享缓冲区的指针  
-    char *buf=shmat(shmids_buf_s,NULL,0);     
-    int f_source=open(filename,O_RDONLY);   //只读模式打开
+    DATA *p=(DATA*)data;
+    FileData *filedata=shmat(shmids_buf_s,NULL,0);      //获取共享缓冲区的指针         
+    int f_source=open(filename,O_RDONLY);           //只读模式打开
     if(f_source==-1){
-        printf("\"%s\" open failed\n",filename);
+        printf("get \"%s\" open failed\n",filename);
         return 0;
     }
-    // timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, label);
-    // printf("get pid = %d\n",timePid);
-    while (1)
+    int ok=1;
+    while (ok)
     {
-        //sleep(1);
+        
         P(buf_s_empty); //申请buf_s空间
         P(buf_s_mutex); //buf_s互斥信号灯
-        *ret=read(f_source,buf,BUF_SIZE);
-        copySize=*ret;
-        times++;
-        ///printf("get = %d  count=%d\n",*ret,times++);
-        if(*ret==0){
-            break;
+        filedata->count=read(f_source,filedata->buf,BUF_SIZE);
+        p->count++;
+        p->copySize=filedata->count;
+        sleep(1);
+        printf("get modified\n");
+        gtk_label_modified(data);
+
+        if(filedata->count<BUF_SIZE){
+            ok=0;
         }
         V(buf_s_mutex);
         V(buf_s_full);
     }
     close(f_source);
-    printf("get end\n");
+    gtk_label_set_text(GTK_LABEL(p->widget),"get ok");
+    while (gtk_events_pending ()) 
+    {
+        gtk_main_iteration ();
+    } 
     return  0;
 }
 
@@ -230,11 +225,10 @@ int get(const char *filename)
  * 
  * @return int 
  */
-int copy(){
-    int *ret_s=shmat(shmids_buf_s_count,NULL,0);  //获取共享缓冲区的指针  
-    char *buf_s=shmat(shmids_buf_s,NULL,0);   
-    int *ret_t=shmat(shmids_buf_t_count,NULL,0);  //获取共享缓冲区的指针  
-    char *buf_t=shmat(shmids_buf_t,NULL,0); 
+int copy(gpointer data){
+    DATA *p=(DATA*)data;
+    FileData *filedata_s=shmat(shmids_buf_s,NULL,0);  //获取共享缓冲区的指针
+    FileData *filedata_t=shmat(shmids_buf_t,NULL,0);  //获取共享缓冲区的指针
     char tempBuf[BUF_SIZE]; 
     int size;
     int ok=1;
@@ -242,16 +236,19 @@ int copy(){
     // printf("get pid = %d\n",timePid);
     while (ok)
     {
-        //sleep(1);
+        
         P(buf_s_full); 
         P(buf_s_mutex);
         //将buf_s的内容复制到tempBuf中
-        memcpy(tempBuf,buf_s,BUF_SIZE);
-        times++;
-        //printf("copy ret_s= %d  count=%d\n",*ret_s,times++);
-        copySize=*ret_s;
-        size=*ret_s;
-        if(*ret_s<BUF_SIZE){
+        memcpy(tempBuf,filedata_s->buf,filedata_s->count);
+        p->count++;
+        p->copySize=filedata_s->count;
+        size=filedata_s->count;
+        sleep(1);
+        printf("copy modified\n");
+        gtk_label_modified(data);
+        
+        if(filedata_s->count<BUF_SIZE){
             ok=0;
         }
         V(buf_s_mutex);
@@ -259,14 +256,16 @@ int copy(){
 
         P(buf_t_empty);
         P(buf_t_mutex);
-        //将tempBuf中的内容
-        memcpy(buf_t,tempBuf,BUF_SIZE);
-        *ret_t=size;
-        //printf("copy ret_t= %d\n",*ret_t);
+        memcpy(filedata_t->buf,tempBuf,BUF_SIZE);
+        filedata_t->count=size;
         V(buf_t_mutex);
         V(buf_t_full);
     }
-    printf("copy end\n");
+    gtk_label_set_text(GTK_LABEL(p->widget),"copy ok");
+    while (gtk_events_pending ()) 
+    {
+        gtk_main_iteration ();
+    } 
     return 0;
 }
 
@@ -276,28 +275,27 @@ int copy(){
  * @param filename //目标文件名
  * @return int 
  */
-int put(const char *filename)
+int put(const char *filename,gpointer data)
 {
-    int size;
-    int *ret=shmat(shmids_buf_t_count,NULL,0);  //获取共享缓冲区的指针  
-    char *buf=shmat(shmids_buf_t,NULL,0);     
+    DATA *p=(DATA*)data;
+    FileData *filedata=shmat(shmids_buf_t,NULL,0);     
     int f_target=open(filename,O_WRONLY|O_CREAT,0777);   //只读模式打开
+    int size; 
     if(f_target==-1){
-        printf("\"%s\" open failed\n",filename);
+        printf("put \"%s\" open failed\n",filename);
         return 0;
     }
     int ok=1;
-    // timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, label);
-    // printf("get pid = %d\n",timePid);
     while (ok)
     {
-        //sleep(1);
         P(buf_t_full); //申请buf_s空间
         P(buf_t_mutex); //buf_s互斥信号灯
-        size=write(f_target,buf,*ret);
-        copySize=*ret;
-        times++;
-        //printf("put = %d  count=%d\n",*ret,times++);
+        size=write(f_target,filedata->buf,filedata->count);
+        p->count++;
+        p->copySize=size;
+        sleep(1);
+        printf("put modified\n");
+        gtk_label_modified(data);
         if(size<BUF_SIZE){
             ok=0;
         }
@@ -305,7 +303,11 @@ int put(const char *filename)
         V(buf_t_empty);
     }
     close(f_target);
-    printf("put end\n");
+    gtk_label_set_text(GTK_LABEL(p->widget),"put ok");
+    while (gtk_events_pending ()) 
+    {
+        gtk_main_iteration ();
+    } 
     return  0;
 }
 
@@ -328,11 +330,11 @@ int initSem(){
     arg4.val=0;
     arg5.val=1;
     if( semctl(semID,buf_s_empty,SETVAL,arg0)==-1||
-        semctl(semID,buf_s_full,SETVAL,arg0)==-1||
-        semctl(semID,buf_s_mutex,SETVAL,arg0)==-1||
-        semctl(semID,buf_t_empty,SETVAL,arg0)==-1||
-        semctl(semID,buf_t_full,SETVAL,arg0)==-1||
-        semctl(semID,buf_t_mutex,SETVAL,arg0)==-1 )
+        semctl(semID,buf_s_full,SETVAL,arg1)==-1||
+        semctl(semID,buf_s_mutex,SETVAL,arg2)==-1||
+        semctl(semID,buf_t_empty,SETVAL,arg3)==-1||
+        semctl(semID,buf_t_full,SETVAL,arg4)==-1||
+        semctl(semID,buf_t_mutex,SETVAL,arg5)==-1 )
     {
         printf("init sem set failed\n");
         return 0;
@@ -395,133 +397,75 @@ int V(int index){
  * @param size     每次拷贝文件的字节
  * @return int 
  */
-int showWindows(int argc,char **argv,char *title,char* content,int mode){
+void showWindows(int argc,char **argv,gpointer data){
     //定义gtk全局组件
     GtkWidget *window;      //定义主窗口
     GtkWidget *vbox;  		//定义一个组装盒;
-    GtkWidget *startButton;		//定义开始按钮;
+    //GtkWidget *startButton;		//定义开始按钮;
     GtkWidget *label; 		//定义一个label;
     
-    WidgetData *data = (WidgetData*)malloc(sizeof(WidgetData));
-    data->widget=label;
+    DATA *p=(DATA *)data;
+    p->count=0;
+    p->copySize=0;
 
     gtk_init(&argc,&argv);
     
     window=gtk_window_new(GTK_WINDOW_TOPLEVEL);//参数表示创建主窗口
+
     /*****窗口设计******/
-    gtk_window_set_title(GTK_WINDOW(window),title);
+    gtk_window_set_title(GTK_WINDOW(window),p->title);
     gtk_window_set_resizable (GTK_WINDOW (window), TRUE); //修改窗体的伸缩属性;
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);    //窗口居中
     gtk_container_set_border_width(GTK_CONTAINER (window), 100);//用来设定宽度;
-    //使用gtk_vbox_new函数建立纵向组装盒;
-    //为了显示构件，必须将构件放入组装盒中,并将组装盒放在窗口内;
     vbox = gtk_vbox_new(FALSE, 10);
     gtk_container_set_border_width(GTK_CONTAINER (vbox), 100);//用来设定宽度;
     gtk_container_add(GTK_CONTAINER (window), vbox);
     //使用gtk_box_pack_start函数将构件放到组装盒中;
-    label = gtk_label_new("NULL");
-    showlabel=label;
+    label = gtk_label_new("wait data coming");
+    p->widget = label;
     gtk_box_pack_start(GTK_BOX (vbox), label, FALSE, FALSE, 10);
     
-    startButton=gtk_button_new_with_label("start");
-    gtk_box_pack_start(GTK_BOX (vbox), startButton, FALSE, FALSE, 10);
+    //startButton = gtk_button_new_with_label("start");
+    //gtk_box_pack_start(GTK_BOX (vbox), startButton, FALSE, FALSE, 10);
     
     /*****关联函数******/
-    //g_signal_connect(G_OBJECT(window),"destory",G_CALLBACK(gtk_main_quit),NULL);//空间和消息函数创建关联
-    //timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, label);
-    
-    if(mode==0){
-        data->filename=argv[1];
-        printf("====================================get\n");
-        pthread_create(&ph_id[mode],NULL,(void *)get_pthread,NULL);
-        g_signal_connect(G_OBJECT(startButton),"clicked",GTK_SIGNAL_FUNC(get_start),data);//空间和消息函数创建关联
-    }else if(mode==1){
-        printf("====================================copy\n");
-        pthread_create(&ph_id[mode],NULL,(void *)copy_pthread,NULL);
-        // timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, label);
-        // g_print("======================****** timePid=%d     +++++++++++\n",timePid);
-        g_signal_connect(G_OBJECT(startButton),"clicked",GTK_SIGNAL_FUNC(copy_start),data);//空间和消息函数创建关联
-    }else if(mode==2){
-        data->filename=argv[2];
-        printf("====================================put\n");
-        pthread_create(&ph_id[mode],NULL,(void *)put_pthread,NULL);
-        g_signal_connect(G_OBJECT(startButton),"clicked",GTK_SIGNAL_FUNC(put_start),data);//空间和消息函数创建关联
-    }
 
     g_signal_connect (G_OBJECT (window), "delete_event",G_CALLBACK (delete_event), NULL);
     g_signal_connect (G_OBJECT (window), "destroy",G_CALLBACK (destroy), NULL);
-    //g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(gtk_label_modified),content);//空间和消息函数创建关联
 
     /*****窗口或组件显示******/
     gtk_widget_show (label);
-    gtk_widget_show(startButton);
+    //gtk_widget_show(startButton);
     gtk_widget_show (vbox);
     gtk_widget_show(window);
-    
-    printf("!!!!!!!!!!!!!!!!!! ==> ph_id[%d]=%d\n",mode,ph_id[mode]);
+
+    if(p->mode==0){
+        gtk_timeout_add(1000,(GtkFunction)get_start,data);
+    }else if(p->mode==1){
+        gtk_timeout_add(1000,(GtkFunction)copy_start,data);
+    }else if(p->mode==2){
+        gtk_timeout_add(1000,(GtkFunction)put_start,data);
+    }
 
     gtk_main();
-
-    printf("end windows\n");
-    free(data);
-    return 0;
 }
 
 /*写个label回调函数来解决文字动态显示问题*/
-guint gtk_label_modified(GtkWidget *widget){
-     char buf[128];
-     if(copySize==BUF_SIZE){
-        sprintf(buf, "count=%d , size=%d",times,copySize);
-        printf("-------------continue label modified ==>buf: %s  timePid=%d ph_id=%d\n",buf,timePid);
-        gtk_label_set_text(GTK_LABEL(widget),buf);
-        while (gtk_events_pending ()) 
-        {
-            gtk_main_iteration ();
-        }
-    }else{
-        printf("***************end label modified\n");
-        sprintf(buf, "count=%d , size=%d",times,copySize);
-        gtk_label_set_text(GTK_LABEL(widget),buf);
-        while (gtk_events_pending ()) 
-        {
-            gtk_main_iteration ();
-        }
-        gtk_timeout_remove(timePid);
+guint gtk_label_modified(gpointer data){
+    DATA *p=(DATA *)data;
+    char buf[128];
+    float num=((float)(p->count*BUF_SIZE)/p->filesize)*100;
+    if(num>100){
+        num=100;
     }
-    return TRUE;
+    sprintf(buf,"次数：%d | 字节：%d | 进度：%.2lf %%",p->count,p->copySize,num);
+    gtk_label_set_text(GTK_LABEL(p->widget),buf);
+    while (gtk_events_pending ()) 
+    {
+        gtk_main_iteration ();
+    } 
 }
 
-void get_start(GtkWidget *widget, gpointer data){
-     WidgetData * wd=(WidgetData *)data;
-     printf("get start\n");
-     printf("get from %s\n",wd->filename);
-     get(wd->filename);
- }
-void copy_start(GtkWidget *label,gpointer data){
-     printf("copy start\n");
-     copy();
- }
-void put_start(GtkWidget *label,gpointer data){
-     WidgetData * wd=(WidgetData *)data;
-     printf("put start\n");
-     printf("put to %s\n",wd->filename);
-     put(wd->filename);
- }
-
-void get_pthread(){
-    timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, showlabel);
-    g_print("======================******get timePid=%d \n",timePid);
-}
-
-void copy_pthread(){
-    timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, showlabel);
-    g_print("======================******copy timePid=%d \n",timePid);
-}
-
-void put_pthread(){
-    timePid=gtk_timeout_add(1000, (GSourceFunc)gtk_label_modified, showlabel);
-    g_print("======================******put timePid=%d \n",timePid);
-}
 /**
  * @brief 通过调用 gtk_main_quit() 来退出程序。这个函数告诉 GTK 当控制权返回给它时
  * 就从 gtk_main 退出。
@@ -549,5 +493,22 @@ gint delete_event( GtkWidget *widget, GdkEvent *event, gpointer data )
     * 当你想弹出“你确定要退出吗?”对话框时它很有用。*/
     g_print ("delete event occurred\n");
     /* 改 TRUE 为 FALSE 程序会关闭。*/
+    return FALSE;
+}
+
+guint get_start(gpointer data){
+    DATA *p=(DATA *)data;
+    get(p->filename,data);
+    return FALSE;
+}
+
+guint copy_start(gpointer data){
+    copy(data);
+    return FALSE;
+}
+
+guint put_start(gpointer data){
+    DATA *p=(DATA *)data;
+    put(p->filename , data);
     return FALSE;
 }
