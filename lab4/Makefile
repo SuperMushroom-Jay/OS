@@ -5,7 +5,8 @@ RES = res/
 INCLUDE = -I./include/
 TARGET = main
 
-SRCS = $(SRC)main.c $(SRC)stringtool.c $(SRC)proctool.c
+SRCS = $(SRC)main.c $(SRC)stringtool.c \
+	   $(SRC)cpu.c $(SRC)meminfo.c
 OBJS = $(SRCS:.c=.o)
 
 # $@	目标文件   
