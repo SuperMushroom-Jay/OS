@@ -48,6 +48,6 @@
 
 #ignore some dir
 .vscode/
-OSDesign/
+Design4/
 
 lab4/src/system_monitor.c

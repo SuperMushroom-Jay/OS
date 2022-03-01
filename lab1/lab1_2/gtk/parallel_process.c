@@ -176,7 +176,6 @@ int main(int argc,char **argv){
  */
 
 
-
 /**
  * @brief 从文件中复制消息进缓冲区buf_s中
  * 
