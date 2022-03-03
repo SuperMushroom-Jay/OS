@@ -37,6 +37,21 @@ MEM_INFO * getMemInfo(const char * filename){
 }
 
 /**
+ * @brief 释放MEM_INFO*申请的内存
+ * 
+ * @param info 
+ * @return boolean 
+ */
+boolean destoryMemInfo(MEM_INFO **info){
+    if(*info!=NULL){
+        free(*info);
+        *info=NULL;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  * @brief 获取内存使用率
  * 
  * @param info 内存信息
@@ -70,10 +85,11 @@ float getProcessMem(pid_t pid){
     while (fgets(tempStr,MEM_BUF_SIZE,fp)!=NULL)    //定位到VmRss
     {
         if(stringMatch(tempStr,"^VmRSS")){
-            printf("YES");
+            //printf("YES");
             break;
         }
     }
+    fclose(fp);
     sscanf(tempStr,"%s%f",filename,&VmRSS);
     //printf("tempStr : %s\n",tempStr);
     VmRSS=VmRSS/1024;

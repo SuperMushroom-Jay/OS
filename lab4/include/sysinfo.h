@@ -1,5 +1,5 @@
-#ifndef __PROCTOOL_H__
-#define __PROCTOOL_H__
+#ifndef __SYSINFO_H__
+#define __SYSINFO_H__
 #include"type.h"
 #include<stdio.h>
 #include<sys/types.h>
@@ -16,7 +16,11 @@ typedef struct {
     char osRelease[SYS_BUF_SIZE];      //系统内核版本
 }SYS_INFO;
 
+/*函数定义*************************************************/
+
 SYS_INFO* getSysInfo();
+
+void destorySysInfo(SYS_INFO **info);
 
 boolean getFileFristLine(const char *filename,char *data);
 

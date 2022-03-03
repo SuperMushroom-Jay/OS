@@ -157,5 +157,17 @@ SYS_INFO* getSysInfo(){
         free(sys_info);
         return NULL;
     }
-    return sys_info;
+    return sys_info; 
+}
+
+/**
+ * @brief 销毁SYS_INFO * 申请的空间
+ * 
+ * @param info 
+ */
+void destorySysInfo(SYS_INFO **info){
+    if(*info!=NULL){
+        free(*info);
+        *info=NULL;
+    }
 }

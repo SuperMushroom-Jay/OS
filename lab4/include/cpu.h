@@ -60,11 +60,17 @@ typedef struct
 
 CPU_INFO * getCpuInfo(const char *filename);
 
+boolean destoryCpuInfo(CPU_INFO **info);
+
 CPU_STAT_INFO * getCpuStatInfo(const char *filename);
+
+boolean destoryCpuStatInfo(CPU_STAT_INFO **info);
 
 float getCpuPrecent(CPU_STAT_INFO *newInfo,CPU_STAT_INFO *oldInfo);
 
 PROCESS_CPU_STAT_INFO * getProcessCpuStatInfo(pid_t pid);
+
+boolean destoryProcessCpuStatInfo(PROCESS_CPU_STAT_INFO **info);
 
 float getProcessCpuPrecent(PROCESS_CPU_STAT_INFO *newProcess,PROCESS_CPU_STAT_INFO *oldProcess,CPU_STAT_INFO *newCpu,CPU_STAT_INFO *oldCpu);
 

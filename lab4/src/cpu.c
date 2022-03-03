@@ -44,7 +44,7 @@ CPU_INFO * getCpuInfo(const char *filename){
         }break;
         case 'c':{
             if(stringMatch(buf,"^cpu MHz")==TRUE){
-                memcpy(cpuInfo->cacheSize,buf,strlen(buf));
+                memcpy(cpuInfo->cpuMHz,buf,strlen(buf));
                 count++;
             }
             if(stringMatch(buf,"^cache size")==TRUE){
@@ -58,6 +58,26 @@ CPU_INFO * getCpuInfo(const char *filename){
     }
     fclose(fp);
     return cpuInfo;
+}
+
+/**
+ * @brief 释放CPU_INFO申请的内存空间
+ * free(ptr)后指针仍然指向原来的堆地址，你仍然可以继续使用，
+ * 但很危险，因为操作系统已经认为这块内存可以使用，
+ * 他会毫不考虑的将他分配给其他程序，
+ * 于是你下次使用的时候可能就已经被别的程序改掉了，
+ * 这种情况就叫“野指针”，所以最好free(ptr)了以后再置空ptr = NULL;
+ * 故这需要**的原因
+ * @param info 
+ * @return boolean 
+ */
+boolean destoryCpuInfo(CPU_INFO **info){
+    if(*info!=NULL){
+        free(*info);
+        *info=NULL;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -89,6 +109,21 @@ CPU_STAT_INFO * getCpuStatInfo(const char *filename){
 }
 
 /**
+ * @brief 释放CPU_STAT_INFO * 申请的内存
+ * 
+ * @param info 
+ * @return boolean 
+ */
+boolean destoryCpuStatInfo(CPU_STAT_INFO **info){
+    if(*info!=NULL){
+        free(*info);
+        *info=NULL;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  * @brief 获取cpu效率
  * 
  * @param newInfo 
@@ -96,6 +131,9 @@ CPU_STAT_INFO * getCpuStatInfo(const char *filename){
  * @return float 返回计算的效率，保留两位小数
  */
 float getCpuPrecent(CPU_STAT_INFO *newInfo,CPU_STAT_INFO *oldInfo){
+    if(newInfo==NULL||oldInfo==NULL){
+        return 0;
+    }
     float idle=newInfo->idle - oldInfo->idle;
     float total=newInfo->total - oldInfo->total;
     float precent=(1-idle/total)*100;
@@ -134,6 +172,21 @@ PROCESS_CPU_STAT_INFO * getProcessCpuStatInfo(pid_t pid){
 }
 
 /**
+ * @brief 释放PROCESS_CPU_STAT_INFO*申请的内存
+ * 
+ * @param info 
+ * @return boolean 
+ */
+boolean destoryProcessCpuStatInfo(PROCESS_CPU_STAT_INFO **info){
+    if(*info!=NULL){
+        free(*info);
+        *info=NULL;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  * @brief 获取进程的cpu占用率
  * 
  * @param newProcess 进程新cpu总时间
@@ -142,7 +195,12 @@ PROCESS_CPU_STAT_INFO * getProcessCpuStatInfo(pid_t pid){
  * @param oldCpu 旧cpu总时间
  * @return float 返回占用率
  */
-float getProcessCpuPrecent(PROCESS_CPU_STAT_INFO *newProcess,PROCESS_CPU_STAT_INFO *oldProcess,CPU_STAT_INFO *newCpu,CPU_STAT_INFO *oldCpu){
+float getProcessCpuPrecent(PROCESS_CPU_STAT_INFO *newProcess,PROCESS_CPU_STAT_INFO *oldProcess,
+                            CPU_STAT_INFO *newCpu,CPU_STAT_INFO *oldCpu)
+{
+    if(newProcess==NULL||oldProcess==NULL||newCpu==NULL||oldCpu==NULL){
+        return 0;
+    }
     float processCpuTotal=newProcess->total-oldProcess->total;
     float cpuTotal=newCpu->total-oldCpu->total;
     float precent=processCpuTotal/cpuTotal*100;

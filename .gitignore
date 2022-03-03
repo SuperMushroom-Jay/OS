@@ -50,4 +50,4 @@
 .vscode/
 Design4/
 
-lab4/src/system_monitor.c
+*.txt

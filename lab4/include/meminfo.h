@@ -24,6 +24,8 @@ typedef struct
 
 MEM_INFO *getMemInfo(const char * filename);
 
+boolean destoryMemInfo(MEM_INFO **info);
+
 float getMemPrecent(MEM_INFO *info);
 
 float getProcessMem(pid_t pid);

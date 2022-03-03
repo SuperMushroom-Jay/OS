@@ -2,11 +2,14 @@
 CC = gcc
 SRC = src/
 RES = res/
+LIB = `pkg-config gtk+-2.0 --cflags --libs`
 INCLUDE = -I./include/
-TARGET = main
+TARGET = main.out
 
 SRCS = $(SRC)main.c $(SRC)stringtool.c \
-	   $(SRC)cpu.c $(SRC)meminfo.c
+	   $(SRC)cpu.c $(SRC)meminfo.c \
+	   $(SRC)process.c $(SRC)graph.c \
+	   $(SRC)sysinfo.c
 OBJS = $(SRCS:.c=.o)
 
 # $@	目标文件   
@@ -15,10 +18,10 @@ OBJS = $(SRCS:.c=.o)
 #	@echo TARGET:$@
 #	@echo OBJECTS:$^
 $(TARGET):$(OBJS)
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ $(LIB)
 
 clean:
-	rm -rf $(TARGET) $(OBJS)
+	rm -rf $(TARGET) $(OBJS) 
 
 %.o:%.c
-	$(CC) $(INCLUDE) -o $@ -c $<
+	$(CC) $(INCLUDE) -o $@ -c $< $(LIB)
